@@ -84,16 +84,18 @@
     fill(0, 0, 0, 0);
     square(15, 330, 50);  
     
+  
     stroke(0, 0, 0,);
     strokeWeight(4);
     fill(0, 0, 0, 0);
-    triangle(10, 330, 40, 300, 70, 330);
+    triangle(10, 330, 40, 300, 70, 330); //Ik had wel veel moeite met het driehoek maar uiteindelijk met hulp van een paar videos, begrijp ik het nu
 
 
 
 
 
    //Stoplight
+  
 
     fill(0, 0, 0);
     noStroke();
