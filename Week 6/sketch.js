@@ -13,6 +13,14 @@ let sleepStartTime = 0; //will remember when the current stage started
 let statsImage;
 let myFont;
 
+let clean;
+let cleaning = false;
+let cleaningStartTime = 0;
+
+let play;
+let playing = false;
+let playingStartTime = 0;
+
 let happy1;
 let happy2;
 
@@ -32,26 +40,19 @@ let sleeping1;
 let sleeping2;
 
 let wakingUp;
+
+let eating = false;
+let eatingStartTime = 0;
+let eat1;
+let eat2;
+
 // let characterImages = [happy1, happy2, idle1, idle2, sad1, sad2, sick1, sick2, falling1, falling2, sleeping1, sleeping2, wakingUp];
 
 
 function setup() {
   createCanvas(800, 800);
 
-  let savedTime = localStorage.getItem("lastPlayed"); //savedTime retrieves the timestamp from previous session
-  let currentTime = Date.now(); //currentTime gets the time right now
-  let timePassed = 0; //starts at 0, creates the variable outside the if, so i can use it elsewhere in setup()
-  if (savedTime !== null) {
-    timePassed = currentTime - Number(savedTime); //it calculates how long the game was closed in milliseconds
-    let offlineTime = Math.floor(timePassed / 10000);// this is basically asking, how many complete 10-second periods passed?
-    hunger = hunger - offlineTime; //hunger goes down
-    energy = energy - offlineTime;
-    cleanliness = cleanliness - offlineTime;
-    localStorage.setItem("hunger", hunger); //Saves the updated value after calculating the offline time
-    localStorage.setItem("energy", energy);
-    localStorage.setItem("cleanliness", cleanliness);
-  }
-
+  //Saved Stats
   let savedHunger = localStorage.getItem("hunger"); // localStorage.getItem("hunger") looks for the saved hunger value
   if (savedHunger !== null) { //savedHunger !== null checks whether a value was actually saved before
     hunger = Number(savedHunger); //Number(savedHunger) converts the saved value into a number, because localstorage stores values in text
@@ -72,9 +73,50 @@ function setup() {
     happiness = Number(savedHappiness);
   }
 
+
+  //Offline time system
+  let savedTime = localStorage.getItem("lastPlayed"); //savedTime retrieves the timestamp from previous session
+  let currentTime = Date.now(); //currentTime gets the time right now
+  let timePassed = 0; //starts at 0, creates the variable outside the if, so i can use it elsewhere in setup()
+ 
+  if (savedTime !== null) {
+    timePassed = currentTime - Number(savedTime); //it calculates how long the game was closed in milliseconds
+   
+    let offlineTime = Math.floor(timePassed / 10000);// this is basically asking, how many complete 10-second periods passed?
+    
+    hunger = hunger - offlineTime; //hunger goes down
+    energy = energy - offlineTime;
+    cleanliness = cleanliness - offlineTime;
+
+    //stops it from going past 0
+    if (hunger < 0) {
+      hunger = 0;
+    } 
+
+    if (energy < 0) {
+      energy = 0;
+    }
+
+    if (cleanliness < 0) {
+      cleanliness = 0;
+    }
+    
+    localStorage.setItem("hunger", hunger); //Saves the updated value after calculating the offline time
+    localStorage.setItem("energy", energy);
+    localStorage.setItem("cleanliness", cleanliness);
+    localStorage.setItem("happiness", happiness);
+  }
+
+
+  //BUTTONS
+  //play button
   playButton = createButton("Play"); //Makes the button
   playButton.mousePressed(() => {  //when play button is clicked, do everything inside of {}, using () => {} lets me tell the button to do multiple things when clicked
     playPet(); //runs my existing pay func
+    playing = true
+    playingStartTime = millis();
+
+
     playButton.style("transform", "scale(1.25)"); //playButton is my play button, .style() is my CSS, transform tells CSS to transform the button, "scale(1.2)" makes the button 1.2 times its normal size
 
     setTimeout(() => {
@@ -89,6 +131,8 @@ function setup() {
   playButton.position(540, 250); //.position changed where the button should be
   styleButton(playButton);
 
+
+  //sleep button
   sleepButton = createButton("Sleep");
   sleepButton.mousePressed(() => {
     sleepPet();
@@ -106,9 +150,16 @@ function setup() {
   sleepButton.position(610, 250);
   styleButton(sleepButton);
 
+
+  //Feed button
   feedButton = createButton("Feed"); //This makes a button named feed
   feedButton.mousePressed(() => {
     feedPet();
+
+    eating = true;
+    eatingStartTime = millis();//this starts eating animation when feed is clicked
+
+
     feedButton.style("transform", "scale(1.25)");
 
     setTimeout(() => {
@@ -123,9 +174,16 @@ function setup() {
   feedButton.position(540, 300);
   styleButton(feedButton);
 
+
+  //Clean button
   cleanlinessButton = createButton("Clean");
   cleanlinessButton.mousePressed(() => {
     cleanPet();
+
+    cleaning = true;
+    cleaningStartTime = millis();
+
+
     cleanlinessButton.style("transform", "scale(1.25)");
 
     setTimeout(() => {
@@ -140,8 +198,8 @@ function setup() {
   cleanlinessButton.position(610, 300);
   styleButton(cleanlinessButton);
 
-  localStorage.setItem("lastPlayed", Date.now()); //Date.now() gives me the current time as a number
 }
+
 
 function draw() {
   background(220);
@@ -163,12 +221,20 @@ function draw() {
   drawPet();
 }
 
+
 function drawPet() {
 
   if (sleeping === true) {
     sleepAnimation();
-  } else {
+  } else if (eating === true) {
+    eatingAnimation();
+  } else if (playing === true) {
+    playingEmote();
+  } else if (cleaning === true) {
+    cleaningEmote();
+  }
 
+  else {
     //Happy
     if (mood === "happy") { //if mood is happy, === means gelijk aan, dunno in english
       if (frameCount % 80 < 40) {
@@ -177,7 +243,7 @@ function drawPet() {
         image(happy2, -50, -100, 850, 900);
       }
     }
-  
+
     //Neutral
     if (mood === "neutral") {
       if (frameCount % 80 < 40) {
@@ -205,8 +271,9 @@ function drawPet() {
       }
     }
   }
-
 }
+
+
 
 function styleButton(button) {
   button.style("font-family", "Cutefont"); //fontfam selects multiple texts to use cutefont on
@@ -219,7 +286,53 @@ function styleButton(button) {
 }
 
 
+function playingEmote() {
+
+  if (frameCount % 30 < 15) {
+    image(play, -53, -100, 850, 900)
+  } else {
+    image(play, -50, -100, 850, 900)
+  }
+
+  if (millis() - playingStartTime >= 2000) {
+    playing = false;
+  }
+}
+
+
+function eatingAnimation() {
+
+  if (frameCount % 100 < 40) { //% 30 makes the frame repeat every 60 frames and < 30 checks if the frame is below 30
+    image(eat1, -53, -100, 850, 900);
+  } else { //if first condition isn't true do something else
+    image(eat2, -50, -100, 850, 900);
+  }
+
+  if (millis() - eatingStartTime >= 1700) { //checks if 2 seconds have passed since my game has started, the >= allows the animation to stop after 3 seconds
+    eating = false; //tells the game that my pet has finished eating
+  }
+}
+
+
+function cleaningEmote() {
+
+  if (frameCount % 30 > 15) {
+    image(clean, -53, -100, 850, 900);
+  } else {
+    image(clean, -50, -100, 850, 900);
+  }
+
+  if (millis() - cleaningStartTime >= 2000) {
+    cleaning = false;
+  }
+}
+
+
 function feedPet() { //Feedfunc
+
+  eating = true;
+  sleepStartTime = millis();
+
 
   if (hunger < 100) { //if hunger is less than 100
     hunger = hunger + 20; // Adds the food
@@ -253,9 +366,9 @@ function sleepAnimation() {
 
   //falling asleep
   if (sleepStage === "falling") {
-      image(falling1, -53, -100, 850, 900);
-    
- 
+    image(falling1, -53, -100, 850, 900);
+
+
 
     if (millis() - sleepStartTime >= 500) { //checks if 1 second has passed
       sleepStage = "sleeping"; //if yes then it sleeps
@@ -263,7 +376,7 @@ function sleepAnimation() {
     }
   }
 
-//sleeping
+  //sleeping
   else if (sleepStage === "sleeping") {
 
     if (frameCount % 60 < 30) {
@@ -283,21 +396,21 @@ function sleepAnimation() {
 
     image(wakingUp, -53, -100, 850, 900);
 
-  
-  if (millis() - sleepStartTime >= 1000) {
-    sleepStage = "gettingUp";
-    sleepStartTime = millis();
+
+    if (millis() - sleepStartTime >= 1000) {
+      sleepStage = "gettingUp";
+      sleepStartTime = millis();
     }
   }
 
   //getting back up
   else if (sleepStage === "gettingUp") {
 
-   
-      image(falling1, -53, -100, 850, 900);
+
+    image(falling1, -53, -100, 850, 900);
 
 
-    if(millis() - sleepStartTime >= 200) {
+    if (millis() - sleepStartTime >= 200) {
       sleepStage = "awake";
       sleeping = false;
     }
@@ -341,7 +454,9 @@ function updateNeeds() {
     hunger = hunger - 3;
     energy = energy - 3;
     cleanliness = cleanliness - 3;
+
   }
+  
   //If it hits 0 then
   //  it doesnt go under that
   if (hunger < 0) {
@@ -363,6 +478,10 @@ function updateNeeds() {
   if (cleanliness > 100) {
     cleanliness = 100;
   }
+  //saves the new values to localstorage
+  localStorage.setItem("hunger", hunger);
+  localStorage.setItem("energy", energy);
+  localStorage.setItem("cleanliness", cleanliness);
 }
 
 
@@ -447,4 +566,12 @@ function preload() { //preload function allows the background to fload in first 
   sleeping1 = loadImage("Images/Sleeping1.png");
   sleeping2 = loadImage("Images/Sleeping2.png");
   wakingUp = loadImage("Images/Wakingup.png");
+  eat1 = loadImage("Images/Eat1.png");
+  eat2 = loadImage("Images/Eat2.png");
+  play = loadImage("Images/Play.png");
+  clean = loadImage("Images/Clean.png");
 }
+
+window.addEventListener("beforeunload", () => { //window is browser page, .addEventListener()  tell the browser to listen for something to happen, beforeunload is the event its lisenting for, it happens when the page is about to close, () => { } is the function that runs when that event happens
+  localStorage.setItem("lastPlayed", Date.now());  //This saves the current timestamp when the player leaves
+}); //The WHOLE thing means, when the player is about to leave page, save the current time under the name lastplayed
